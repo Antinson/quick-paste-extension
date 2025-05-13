@@ -3,6 +3,18 @@ let currentTabURL = "";
 chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
   currentTabURL = tabs[0]?.url || '';
   document.getElementById("message").value = currentTabURL;
+
+  chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: () => {
+      const el = document.getElementById("replymessage");
+      return el ? el.innerText || el.value : '';
+    },
+  }, (results) => {
+    const raw = results?.[0]?.result || '';
+    const message = raw.split('| Support')[0].trim();
+    document.getElementById("message").value = message;
+  });
 });
 
 document.getElementById("generate").addEventListener("click", () => {
