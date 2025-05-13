@@ -1,7 +1,8 @@
 let currentTabURL = "";
 
 chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-  currentTabURL = tabs[0]?.url || '';
+  const tab = tabs[0]; // Define tab here
+  currentTabURL = tab?.url || '';
   document.getElementById("message").value = currentTabURL;
 
   chrome.scripting.executeScript({
@@ -13,7 +14,9 @@ chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
   }, (results) => {
     const raw = results?.[0]?.result || '';
     const message = raw.split('| Support')[0].trim();
-    document.getElementById("message").value = message;
+    if (message) {
+      document.getElementById("message").value = message;
+    }
   });
 });
 
@@ -24,7 +27,6 @@ document.getElementById("generate").addEventListener("click", () => {
     return;
   }
 
-  // Fake paste link for now
   const pasteLink = `https://paste.sitehost.nz/#${btoa(message)}`;
 
   const formatted = `
