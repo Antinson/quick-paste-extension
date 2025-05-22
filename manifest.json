@@ -4,10 +4,18 @@
   "version": "1.0",
   "description": "Generate encrypted paste links for internal sharing",
   "action": {
-    "default_popup": "popup.html"
+    "default_popup": "popup.html",
+    "default_icon": {
+      "48": "icon.png"
+    }
   },
   "background": {
     "scripts": ["background.js"]
+  },
+  "icons": {
+    "16": "icon.png",
+    "48": "icon.png",
+    "128": "icon.png"
   },
   "permissions": ["scripting", "tabs", "storage", "clipboardRead"],
   "host_permissions": ["<all_urls>"]
