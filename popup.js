@@ -7,23 +7,16 @@ function logError(err) {
   if (output) output.textContent = "Error: " + (err.message || err);
 }
 
-// On popup load: get the current tab URL and the reply message content
-chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-  const tab = tabs[0];
-  currentTabURL = tab?.url || "";
+// On popup load: get the current tab URL and message from background script
+document.addEventListener("DOMContentLoaded", async () => {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  currentTabURL = tab.url || "";
   const msgField = document.getElementById("message");
   if (msgField) msgField.value = currentTabURL;
 
-  chrome.scripting.executeScript({
-    target: { tabId: tab.id },
-    func: () => {
-      const el = document.getElementById("replymessage");
-      return el ? el.value : "";
-    },
-  }, (results) => {
+  chrome.runtime.sendMessage({ type: "getReplyMessage", tabId: tab.id }, (response) => {
     try {
-      const raw = results?.[0]?.result || "";
-      console.log("Raw result from page:", raw);
+      const raw = response || "";
       const message = raw.split("| Support")[0].trim();
       if (message) msgField.value = message;
     } catch (err) {
@@ -32,14 +25,14 @@ chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
   });
 });
 
-// Simplest Haste-style POST → returns the new key
+// POST to Hastebin-like paste server
 async function generatePaste(message) {
   const res = await fetch("http://paste.anthony-sh.co.nz/documents", {
     method: "POST",
     headers: {
-      "Accept":           "application/json, text/plain, */*; q=0.01",
-      "Content-Type":     "text/plain; charset=UTF-8",
-      "X-Requested-With":"XMLHttpRequest"
+      "Accept": "application/json, text/plain, */*; q=0.01",
+      "Content-Type": "text/plain; charset=UTF-8",
+      "X-Requested-With": "XMLHttpRequest"
     },
     body: message + "\n"
   });
@@ -49,30 +42,19 @@ async function generatePaste(message) {
     throw new Error(`HTTP ${res.status}: ${text}`);
   }
   const json = await res.json();
-  console.log("Paste response JSON:", json);
   if (!json.key) throw new Error("Missing paste key in response");
   return json.key;
 }
 
 // Handle "Generate" button click
-const generateBtn = document.getElementById("generate");
-generateBtn.addEventListener("click", async () => {
+document.getElementById("generate").addEventListener("click", async () => {
   const message = document.getElementById("message").value.trim();
-  if (!message) {
-    alert("Please enter or extract a message first.");
-    return;
-  }
+  if (!message) return alert("Please enter or extract a message first.");
 
   try {
     const key = await generatePaste(message);
     const pasteUrl = `http://paste.anthony-sh.co.nz/${key}`;
-
-    const formatted = `
-Ticket  
-${currentTabURL}
-
-Draft  
-${pasteUrl}`.trim();
+    const formatted = `Ticket\n${currentTabURL}\n\nDraft\n${pasteUrl}`.trim();
 
     document.getElementById("output").innerHTML = `
       <pre>${formatted}</pre>
@@ -81,7 +63,6 @@ ${pasteUrl}`.trim();
     document.getElementById("copyBtn").addEventListener("click", () => {
       navigator.clipboard.writeText(formatted);
     });
-
   } catch (err) {
     logError(err);
   }
